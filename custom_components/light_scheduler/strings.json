@@ -1,0 +1,13 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Light Scheduler",
+        "description": "Set up time-based brightness and color temperature control for your lights. Configuration is done via the sidebar panel."
+      }
+    },
+    "abort": {
+      "single_instance_allowed": "Light Scheduler is already configured."
+    }
+  }
+}
