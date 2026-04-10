@@ -312,8 +312,14 @@ class LightSchedulerManager:
 
         color_temp = period.get(CONF_COLOR_TEMP)
         if color_temp is not None and color_temp != "":
-            # Kelvin value
-            data["color_temp_kelvin"] = int(color_temp)
+            # Only send color_temp if the light supports it
+            state = self.hass.states.get(entity_id)
+            color_modes = (
+                state.attributes.get("supported_color_modes", [])
+                if state else []
+            )
+            if "color_temp" in color_modes or "ct" in color_modes:
+                data["color_temp_kelvin"] = int(color_temp)
 
         transition = period.get(CONF_TRANSITION)
         if transition is not None and transition != "":
