@@ -15,4 +15,4 @@ CONF_AREA_ID = "area_id"
 CONF_TRANSITION = "transition"
 
 DEFAULT_TRANSITION = 2  # seconds
-SCAN_INTERVAL = 60  # seconds — how often to re-check sun position and update lights
+SCAN_INTERVAL = 5  # seconds — re-check interval for on lights
