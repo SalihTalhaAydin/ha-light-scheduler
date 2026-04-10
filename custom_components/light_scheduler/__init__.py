@@ -281,6 +281,12 @@ class LightSchedulerManager:
 
     async def _apply_to_light(self, entity_id: str):
         """Apply the active period's brightness/color_temp to a single light."""
+        # Re-check the light is still ON right now — it may have been
+        # turned off between the time we queued this call and now.
+        current = self.hass.states.get(entity_id)
+        if not current or current.state != STATE_ON:
+            return
+
         now = dt_util.now()
 
         # Check area overrides first
@@ -331,28 +337,32 @@ class LightSchedulerManager:
             # Only entity_id and transition — nothing to set
             return
 
-        # Skip if the light already matches the target values
+        # Re-check light is still ON before sending any command
         state = self.hass.states.get(entity_id)
-        if state and state.state == STATE_ON:
-            attrs = state.attributes
-            needs_update = False
+        if not state or state.state != STATE_ON:
+            return
 
-            target_bright = data.get("brightness")
-            if target_bright is not None:
-                current = attrs.get("brightness")
-                # Allow tolerance of 3 (out of 255) for rounding
-                if current is None or abs(current - target_bright) > 3:
-                    needs_update = True
+        # Skip if the light already matches the target values
+        attrs = state.attributes
+        needs_update = False
 
-            target_ct = data.get("color_temp_kelvin")
-            if target_ct is not None:
-                current_ct = attrs.get("color_temp_kelvin")
-                # Allow tolerance of 50K for rounding
-                if current_ct is None or abs(current_ct - target_ct) > 50:
-                    needs_update = True
+        target_bright = data.get("brightness")
+        if target_bright is not None:
+            current_bright = attrs.get("brightness")
+            # Allow tolerance of 3 (out of 255) for rounding
+            if (current_bright is None
+                    or abs(current_bright - target_bright) > 3):
+                needs_update = True
 
-            if not needs_update:
-                return
+        target_ct = data.get("color_temp_kelvin")
+        if target_ct is not None:
+            current_ct = attrs.get("color_temp_kelvin")
+            # Allow tolerance of 50K for rounding
+            if current_ct is None or abs(current_ct - target_ct) > 50:
+                needs_update = True
+
+        if not needs_update:
+            return
 
         _LOGGER.debug(
             "Applying to %s: brightness=%s, color_temp=%s",
