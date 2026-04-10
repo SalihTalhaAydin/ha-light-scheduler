@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a1a2e"/>
+      <stop offset="100%" style="stop-color:#16213e"/>
+    </linearGradient>
+    <linearGradient id="bulb" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffd93d"/>
+      <stop offset="100%" style="stop-color:#ff914d"/>
+    </linearGradient>
+    <linearGradient id="glow" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffd93d;stop-opacity:0.4"/>
+      <stop offset="100%" style="stop-color:#ff914d;stop-opacity:0"/>
+    </linearGradient>
+    <linearGradient id="clock" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6ec1e4"/>
+      <stop offset="100%" style="stop-color:#4a90d9"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="512" height="512" rx="96" fill="url(#bg)"/>
+
+  <!-- Glow behind bulb -->
+  <circle cx="220" cy="200" r="130" fill="url(#glow)"/>
+
+  <!-- Light rays -->
+  <g stroke="#ffd93d" stroke-width="6" stroke-linecap="round" opacity="0.6">
+    <line x1="220" y1="60" x2="220" y2="90"/>
+    <line x1="120" y1="100" x2="141" y2="121"/>
+    <line x1="80" y1="200" x2="110" y2="200"/>
+    <line x1="120" y1="300" x2="141" y2="279"/>
+    <line x1="320" y1="100" x2="299" y2="121"/>
+  </g>
+
+  <!-- Lightbulb body -->
+  <path d="M170 220 C170 160 270 160 270 220 C270 260 260 270 260 290 L180 290 C180 270 170 260 170 220Z"
+        fill="url(#bulb)" stroke="#e8a317" stroke-width="3"/>
+
+  <!-- Bulb base/screw -->
+  <rect x="185" y="290" width="70" height="12" rx="3" fill="#b8b8b8" stroke="#999" stroke-width="2"/>
+  <rect x="188" y="304" width="64" height="10" rx="3" fill="#a0a0a0" stroke="#999" stroke-width="2"/>
+  <rect x="191" y="316" width="58" height="10" rx="3" fill="#909090" stroke="#888" stroke-width="2"/>
+  <path d="M200 326 L205 340 L235 340 L240 326" fill="#808080" stroke="#888" stroke-width="2"/>
+
+  <!-- Filament inside bulb -->
+  <path d="M205 250 Q215 225 220 250 Q225 225 235 250" stroke="#fff" stroke-width="3" fill="none" opacity="0.8"/>
+
+  <!-- Clock circle -->
+  <circle cx="360" cy="350" r="90" fill="#1a1a2e" stroke="url(#clock)" stroke-width="6"/>
+  <circle cx="360" cy="350" r="82" fill="#0f1629"/>
+
+  <!-- Clock tick marks -->
+  <g stroke="#6ec1e4" stroke-width="3" stroke-linecap="round" opacity="0.5">
+    <line x1="360" y1="275" x2="360" y2="290"/>
+    <line x1="360" y1="410" x2="360" y2="425"/>
+    <line x1="275" y1="350" x2="290" y2="350"/>
+    <line x1="430" y1="350" x2="445" y2="350"/>
+  </g>
+
+  <!-- Clock hands -->
+  <line x1="360" y1="350" x2="360" y2="300" stroke="#6ec1e4" stroke-width="5" stroke-linecap="round"/>
+  <line x1="360" y1="350" x2="400" y2="330" stroke="#4a90d9" stroke-width="4" stroke-linecap="round"/>
+
+  <!-- Clock center dot -->
+  <circle cx="360" cy="350" r="6" fill="#6ec1e4"/>
+
+  <!-- Sun arc on clock (representing schedule) -->
+  <path d="M300 310 Q330 270 370 270" stroke="#ffd93d" stroke-width="4" fill="none" stroke-linecap="round" opacity="0.7"/>
+  <!-- Moon arc on clock -->
+  <path d="M390 400 Q370 420 340 415" stroke="#8e8ecc" stroke-width="4" fill="none" stroke-linecap="round" opacity="0.7"/>
+</svg>
