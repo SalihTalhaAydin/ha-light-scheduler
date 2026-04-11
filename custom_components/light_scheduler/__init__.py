@@ -311,19 +311,29 @@ class LightSchedulerManager:
         # Build service data
         data: dict = {"entity_id": entity_id}
 
+        # Check what this light actually supports
+        state = self.hass.states.get(entity_id)
+        color_modes = (
+            state.attributes.get("supported_color_modes", [])
+            if state else []
+        )
+
+        # If light only supports on/off, don't send brightness
+        # or color_temp — there's nothing to adjust.
+        supports_brightness = any(
+            m in color_modes
+            for m in ("brightness", "color_temp", "ct", "hs",
+                      "xy", "rgb", "rgbw", "rgbww")
+        )
+
         brightness = period.get(CONF_BRIGHTNESS)
-        if brightness is not None and brightness != "":
+        if (brightness is not None and brightness != ""
+                and supports_brightness):
             # brightness_pct (0-100) → convert to HA brightness (0-255)
             data["brightness"] = round(int(brightness) * 255 / 100)
 
         color_temp = period.get(CONF_COLOR_TEMP)
         if color_temp is not None and color_temp != "":
-            # Only send color_temp if the light supports it
-            state = self.hass.states.get(entity_id)
-            color_modes = (
-                state.attributes.get("supported_color_modes", [])
-                if state else []
-            )
             if "color_temp" in color_modes or "ct" in color_modes:
                 data["color_temp_kelvin"] = int(color_temp)
 
