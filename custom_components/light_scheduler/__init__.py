@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import logging
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -13,12 +12,9 @@ import homeassistant.util.dt as dt_util
 from homeassistant.components import frontend, websocket_api
 from homeassistant.components.http import StaticPathConfig
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import STATE_ON
-from homeassistant.core import HomeAssistant, callback, Event
-from homeassistant.helpers.event import (
-    async_track_state_change_event,
-    async_track_time_interval,
-)
+from homeassistant.const import EVENT_STATE_CHANGED, STATE_ON
+from homeassistant.core import Context, HomeAssistant, callback, Event
+from homeassistant.helpers.event import async_track_time_interval
 
 from .const import (
     DOMAIN,
@@ -194,6 +190,9 @@ class LightSchedulerManager:
         # Track which lights were manually overridden — skip them
         # until they are toggled off and back on.
         self._overridden: set[str] = set()
+        # Track context IDs of our own service calls so we can
+        # distinguish them from manual changes.
+        self._our_contexts: set[str] = set()
 
     def _periods(self) -> list[dict]:
         return self.entry.data.get(CONF_PERIODS, [])
@@ -203,11 +202,11 @@ class LightSchedulerManager:
 
     async def async_start(self):
         """Start listening for light changes and periodic updates."""
-        # Listen for ANY light turning on
+        # Listen for ALL state changes via the event bus.
+        # (async_track_state_change_event with [] tracks nothing)
         self._unsubs.append(
-            async_track_state_change_event(
-                self.hass,
-                [],  # empty = all entities
+            self.hass.bus.async_listen(
+                EVENT_STATE_CHANGED,
                 self._on_state_change,
             )
         )
@@ -233,10 +232,11 @@ class LightSchedulerManager:
             u()
         self._unsubs.clear()
         self._overridden.clear()
+        self._our_contexts.clear()
 
     @callback
     def _on_state_change(self, event: Event):
-        """Handle any entity state change — we only care about lights turning on/off."""
+        """Handle state changes for lights."""
         eid = event.data["entity_id"]
         if not eid.startswith("light."):
             return
@@ -253,14 +253,17 @@ class LightSchedulerManager:
 
         # Light just turned on (from off or unavailable)
         if os and os.state == STATE_ON:
-            # State changed while already on — might be a manual brightness change.
-            # Check if this was triggered by us (via context).
-            if ns.context and ns.context.parent_id:
-                # This change was triggered by our service call — ignore
+            # State changed while already on.
+            # Check if this was triggered by us.
+            ctx_id = ns.context.id if ns.context else None
+            if ctx_id and ctx_id in self._our_contexts:
+                self._our_contexts.discard(ctx_id)
                 return
             # Manual change — mark as overridden
             self._overridden.add(eid)
-            _LOGGER.debug("Manual override detected: %s", eid)
+            _LOGGER.debug(
+                "Manual override detected: %s", eid
+            )
             return
 
         # Light turned on from off — apply schedule
@@ -280,7 +283,7 @@ class LightSchedulerManager:
             await self._apply_to_light(state.entity_id)
 
     async def _apply_to_light(self, entity_id: str):
-        """Apply the active period's brightness/color_temp to a single light."""
+        """Apply active period's settings to a light."""
         # Re-check the light is still ON right now — it may have been
         # turned off between the time we queued this call and now.
         current = self.hass.states.get(entity_id)
@@ -381,8 +384,16 @@ class LightSchedulerManager:
             data.get("color_temp_kelvin"),
         )
 
+        # Use a tracked context so _on_state_change knows
+        # this change came from us, not a manual override.
+        ctx = Context()
+        self._our_contexts.add(ctx.id)
+        # Prevent unbounded growth — cap at 100 entries
+        if len(self._our_contexts) > 100:
+            self._our_contexts.clear()
+
         await self.hass.services.async_call(
-            "light", "turn_on", data,
+            "light", "turn_on", data, context=ctx,
         )
 
     def _get_light_area(self, entity_id: str) -> str | None:
@@ -445,7 +456,7 @@ class LightSchedulerManager:
         return now >= start or now < end
 
     def _resolve_time(self, t: str, now: datetime):
-        """Parse a time string: 'HH:MM', 'sunrise', 'sunset+30', 'sunset-1h30m', etc."""
+        """Parse time: 'HH:MM', 'sunrise', 'sunset+30m'."""
         if not t:
             return None
         t = t.strip().lower()
