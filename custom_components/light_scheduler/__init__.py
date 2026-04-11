@@ -58,7 +58,7 @@ async def async_setup_entry(
         frontend_url_path="light-scheduler",
         config={"_panel_custom": {
             "name": "light-scheduler-panel",
-            "module_url": "/light_scheduler/panel.js?v=100",
+            "module_url": "/light_scheduler/panel.js?v=101",
         }},
         require_admin=False,
     )
@@ -410,6 +410,9 @@ class LightSchedulerManager:
         for p in periods:
             if not p.get(CONF_ENABLED, True):
                 continue
+            # "Always" period — no time restrictions
+            if p.get("always", False):
+                return p
             from_str = p.get(CONF_FROM_TIME, "")
             to_str = p.get(CONF_TO_TIME, "")
             if not from_str or not to_str:

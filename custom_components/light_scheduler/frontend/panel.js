@@ -205,13 +205,23 @@ class LightSchedulerPanel extends HTMLElement {
           <label>Name (optional)</label>
           <input type="text" id="pName" placeholder="e.g. Evening, Night mode...">
         </div>
-        <div class="f">
-          <label>From</label>
-          <div id="pFromPicker"></div>
+        <div class="f" style="display:flex;align-items:center;gap:12px;">
+          <label style="margin:0;">Always active</label>
+          <label class="toggle">
+            <input type="checkbox" id="pAlways">
+            <span class="slider"></span>
+          </label>
+          <span class="hint" style="margin:0;">Applies at all times — no time range needed</span>
         </div>
-        <div class="f">
-          <label>To</label>
-          <div id="pToPicker"></div>
+        <div id="pTimeFields">
+          <div class="f">
+            <label>From</label>
+            <div id="pFromPicker"></div>
+          </div>
+          <div class="f">
+            <label>To</label>
+            <div id="pToPicker"></div>
+          </div>
         </div>
         <div class="f">
           <label>Brightness (%)</label>
@@ -271,6 +281,11 @@ class LightSchedulerPanel extends HTMLElement {
     // Build time pickers
     this._makeTimePicker("pFrom", $("pFromPicker"));
     this._makeTimePicker("pTo", $("pToPicker"));
+
+    // Always toggle — show/hide time fields
+    $("pAlways").onchange = () => {
+      $("pTimeFields").style.display = $("pAlways").checked ? "none" : "";
+    };
 
     // Brightness slider
     $("pBrightness").oninput = () => {
@@ -421,9 +436,10 @@ class LightSchedulerPanel extends HTMLElement {
 
     periods.forEach((p, i) => {
       const enabled = p.enabled !== false;
+      const isAlways = !!p.always;
       const name = p.name || `Period ${i + 1}`;
-      const from = this._formatTime(p.from_time || "");
-      const to = this._formatTime(p.to_time || "");
+      const from = isAlways ? "Always" : this._formatTime(p.from_time || "");
+      const to = isAlways ? "—" : this._formatTime(p.to_time || "");
       const brightness = p.brightness != null ? p.brightness + "%" : "—";
       const colorTemp = p.color_temp != null ? p.color_temp + "K" : "—";
       const transition = p.transition != null ? p.transition + "s" : "2s";
@@ -468,7 +484,7 @@ class LightSchedulerPanel extends HTMLElement {
       globalTable.querySelectorAll("tr[data-period-idx]").forEach(tr => {
         const idx = parseInt(tr.dataset.periodIdx);
         const p = this._periods[idx];
-        if (p && p.from_time === this._activePeriod.from_time && p.to_time === this._activePeriod.to_time) {
+        if (p && ((p.always && this._activePeriod.always) || (p.from_time === this._activePeriod.from_time && p.to_time === this._activePeriod.to_time))) {
           tr.classList.add("active-row");
           const nameCell = tr.children[1];
           if (nameCell && !nameCell.querySelector(".active-dot")) {
@@ -500,6 +516,8 @@ class LightSchedulerPanel extends HTMLElement {
     }
 
     $("pName").value = p.name || "";
+    $("pAlways").checked = !!p.always;
+    $("pTimeFields").style.display = p.always ? "none" : "";
     this._setTimePicker("pFrom", p.from_time || "");
     this._setTimePicker("pTo", p.to_time || "");
     $("pBrightness").value = p.brightness ?? 100;
@@ -522,18 +540,20 @@ class LightSchedulerPanel extends HTMLElement {
 
   _savePeriod() {
     const $ = id => this.shadowRoot.getElementById(id);
+    const isAlways = $("pAlways").checked;
     const fromTime = this._getTimePicker("pFrom");
     const toTime = this._getTimePicker("pTo");
 
-    if (!fromTime || !toTime) {
-      alert("Please set both From and To times.");
+    if (!isAlways && (!fromTime || !toTime)) {
+      alert("Please set both From and To times, or enable 'Always active'.");
       return;
     }
 
     const period = {
       name: $("pName").value || "",
-      from_time: fromTime,
-      to_time: toTime,
+      always: isAlways,
+      from_time: isAlways ? "" : fromTime,
+      to_time: isAlways ? "" : toTime,
       brightness: parseInt($("pBrightness").value),
       color_temp: parseInt($("pColorTemp").value),
       transition: parseInt($("pTransition").value) || 2,
